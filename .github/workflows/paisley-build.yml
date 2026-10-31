@@ -3,6 +3,9 @@ name: Paisley build and test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - paisley-home-screen
 
 permissions:
   contents: read
