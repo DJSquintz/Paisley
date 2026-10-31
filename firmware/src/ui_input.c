@@ -51,11 +51,11 @@ static int8_t *octave_control(void)
  * they are Esc / Enter (docs/design/README.md, Navigation) */
 static int oct_nav(void)
 {
-    return designer_on() || !ui.home || ui.menu || ui.confirm || name_on() || new_on() || layer_set_open() || pop.on || smap.on;
+    return designer_on() || paisley_on() || !ui.home || ui.menu || ui.confirm || name_on() || new_on() || layer_set_open() || pop.on || smap.on;
 }
 static int oct_enter_ok(void)                           /* OCT+ would do something here */
 {
-    return list_on() || slot_kind() || motion_page() || (!ui.home && cur_page()->graph == GR_SCALE_PICKER) || page_sheet() || pop.on || smap.on || (!ui.home && cur_page()->graph == GR_BROWSE) || ptc_on();
+    return paisley_on() || list_on() || slot_kind() || motion_page() || (!ui.home && cur_page()->graph == GR_SCALE_PICKER) || page_sheet() || pop.on || smap.on || (!ui.home && cur_page()->graph == GR_BROWSE) || ptc_on();
 }
 
 /* the OCT LEDs, bit 0 OCT-, bit 1 OCT+. In the dialogs, the menu and on action pages OCT- (back) is
@@ -2308,7 +2308,7 @@ static void ui_input(void)
         open_family(FAM_SEQ);
     }
     if (home == BT_TAP && ui.home && !pop.on) {         /* HOME acts on release (a hold opens the menu); on HOME: its */
-        ui.home_pg = (uint8_t)!ui.home_pg;              /* other page (ui_view.c) */
+        ui.home_pg = (uint8_t)((ui.home_pg + 1u) % 3u);  /* Stage -> chord -> Paisley -> Stage */
         ui.force = 1;
     } else if (home == BT_TAP) {
         go_home();                                      /* (to the page it was on) */
@@ -2403,6 +2403,14 @@ static void ui_input(void)
     if(bulk.on && !slot_kind() && !ui.home && cur_page()->graph==GR_ROLL && (oct&2u)){
         notes_bulk_sheet_open();oct=0;
     } else if((bulk.on||ui.note_move||ui.note_copy)&&(oct&1u)){bulk_clear();oct=0;}
+    if (paisley_on() && (oct & 2u)) {
+        paisley_enter();
+        oct = 0;
+    } else if (paisley_on() && (oct & 1u)) {
+        ui.home_pg = 0;                            /* OCT-: Stage; leave octave unchanged */
+        ui.force = 1;
+        oct = 0;
+    }
     if (list_on() && (oct & 2u)) {                      /* a list page: OCT+ the row's list, OCT- Stage */
         list_enter();
     } else if (list_on() && (oct & 1u)) {
@@ -2480,6 +2488,8 @@ static void ui_input(void)
     if (s) step_edit_combo();
     if (s && !ui.home && cur_page()->graph == GR_SCALE_PICKER) {
         scale_picker_step(list_accel(EN_PRESET, s, scale_picker_count(), 0));
+    } else if (s && paisley_on()) {
+        /* No patch loading on the navigation dashboard. */
     } else if (s && (ui.home || cur_page()->graph == GR_BROWSE || cur_page()->graph == GR_PATGRID)) {
         /* PRESETS browses the selected part's sounds (all engines, then user presets) on HOME and the
          * PRESETS page and PATTERNS (never the steps); elsewhere (TRACKS too, where one records) a stray turn
@@ -2502,7 +2512,7 @@ static void ui_input(void)
         fm6_opsel = (uint8_t)clamp((int32_t)fm6_opsel + (s > 0 ? 1 : -1), 0, 5);
         ui.force = 1;
     }
-    if ((s = panel_enc(EN_ALGO)) != 0) {           /* ALGORITHM: the selected track, on every page */
+    if ((s = panel_enc(EN_ALGO)) != 0 && !paisley_on()) { /* ALGORITHM: track; inert on Paisley HOME */
         step_edit_combo();
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_n() - 1));
     }
@@ -2518,13 +2528,16 @@ static void ui_input(void)
         } else if (!ui.home) {                          /* the section's pages (BPM: SEQ > TEMPO; the notes, the hits:
                                                          * KNOB 1) */
             page_scroll(s);
-        } else {                                        /* HOME: what the menu's HOME SELECT says */
+        } else if (paisley_on()) {
+            paisley_move(s);
+        } else {                                        /* Stage / chord: HOME SELECT */
             select_turn(home_select(), s);
         }
     }
     for (k = 0; !knob_layer && k < 4u; k++) {
         if ((s = panel_enc(EN_K1 + k)) == 0)
             continue;
+        if (paisley_on()) continue;             /* no parameter edits on dashboard */
         step_edit_combo();
         if(k<2u && bulk_jog(s))continue;
         if (k == 0u && cur_page()->graph == GR_ROLL && step_gesture(s))   /* KNOB 1 too, as SELECT (ENV / SCL / a key

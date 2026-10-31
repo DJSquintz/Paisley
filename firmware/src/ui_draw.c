@@ -347,10 +347,10 @@ static void draw_head(void)
         }
         if (!ui.home) {                                 /* a page: where it is in its family */
             head_pages(x + 6, 236 - cw - (low ? 22 : 0) - hw);
-        } else if (x + 6 + 28 <= 236 - cw - (low ? 22 : 0) - hw - 6) {   /* HOME: its two pages (Stage, the chord view),
+        } else if (x + 6 + 40 <= 236 - cw - (low ? 22 : 0) - hw - 6) {   /* HOME: Stage, chord, and Paisley dashboard,
                                                                    * where there is room */
             uint32_t i;
-            for (i = 0, x += 6; i < 2u; i++) {
+            for (i = 0, x += 6; i < 3u; i++) {
                 int32_t w = i == ui.home_pg ? 16 : 6;
                 cv_rrect(x, H_HEAD / 2 - 3, w, 6, 3, i == ui.home_pg ? T_THEME : T_LINE, T_BG);
                 x += w + 6;
@@ -1124,6 +1124,7 @@ static int own_screen(void)                             /* a page drawn whole by
     return !ui.home && (g == GR_BROWSE || g == GR_PATGRID || g == GR_SONG || g == GR_SCALE_PICKER);
 }
 /* the page (or Stage): its own screen, the redesign's, else its cards, panel and footer */
+#include "ui_paisley.c"                          /* Paisley six-tile HOME */
 static void draw_page(void)
 {
     /* SCALES opens explicitly from the Scale row, outside the SCL/SELECT cycle.
@@ -1133,7 +1134,10 @@ static void draw_page(void)
         page_entered();
     }
     cursor_fix();
-    if (designer_screen()) {                            /* the sound designer's START, FEATURES (ui_designer.c) */
+    if (paisley_on()) {
+        if (ui.force) paisley_draw(); /* static dashboard: redraw only on focus/entry/theme changes */
+        else draw_head();            /* transport and BPM remain live */
+    } else if (designer_screen()) {                     /* the sound designer's START, FEATURES (ui_designer.c) */
         designer_draw();
     } else if (!own_screen() && slot_kind()) {          /* a slot page (ui_slots.c) */
         slot_draw();

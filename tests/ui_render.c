@@ -2265,6 +2265,22 @@ int main(int argc, char **argv)
         fprintf(rep, "(self-test: %u findings above are expected)\n\n", nfind);
         nfind = 0;
     }
+    /* Paisley HOME is a third HOME view, so exercise its six-tile canvas in
+     * every palette, including MONO and the pixel font, before the page sweep. */
+    for (p = 0; p < UI_PAL_ENTRIES; p++) {
+        uint32_t tile;
+        for (tile = 0; tile < PAISLEY_TILES; tile++) {
+            char name[64];
+            state(); pal(p); go_home(); ui.home_pg = 2; ui.paisley_tile = (uint8_t)tile;
+            snprintf(name, sizeof name, "%s/PAISLEY HOME %u", UI_PALETTES[p].name, tile);
+            cur_name = name;
+            draw(-1);
+            lint();
+            if (p == UI_GRAY_INDEX) mono_check();
+            if (p == 0u && tile == 0u) write_ppm(out, "NIGHT", "PAISLEY HOME");
+            if (p == 8u && tile == 0u) write_ppm(out, "PAISLEY", "HOME");
+        }
+    }
     for (p = 0; p < UI_PAL_ENTRIES; p++)
         for (s = 0; s < S_COUNT; s++) {
             char name[64];

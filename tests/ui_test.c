@@ -1065,7 +1065,9 @@ static int test_home_view(void)
     press(B_HOME);
     bad += check("HOME on Stage: the second page (the chord view)", ui.home && ui.home_pg == 1u);
     press(B_HOME);
-    bad += check("  HOME again: Stage", ui.home && ui.home_pg == 0u);
+    bad += check("  HOME again: Paisley dashboard", paisley_on());
+    press(B_HOME);
+    bad += check("  HOME next: Stage", ui.home && ui.home_pg == 0u);
     press(B_HOME);
     open_family(FAM_EDIT); frame();
     press(B_HOME);
@@ -1090,6 +1092,49 @@ static int test_home_view(void)
     turn(EN_K1, 3);
     bad += check("  KNOB 1: the sound's, as on Stage", ui.home_pg == 1u &&
                  (TSEL->eng_req == ENGI_PROPHET || TSEL->eng_req == ENGI_CZ || TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != before));
+    ui_power_on();
+    return bad;
+}
+
+/* Paisley HOME tiles navigate to existing pages and never turn synth controls. */
+static int test_paisley_home(void)
+{
+    int bad = 0;
+    uint32_t k;
+    int16_t value;
+    ui_power_on();
+    go_home();
+    ui.home_pg = 2;
+    frame();
+    bad += check("PAISLEY: dedicated HOME view", paisley_on());
+    value = TSEL->p[P_LEVEL];
+    turn(EN_SELECT, 1);
+    bad += check("  SELECT moves focus to SYNTH", ui.paisley_tile == PAISLEY_SYNTH && paisley_on());
+    turn(EN_SELECT, -2);
+    bad += check("  SELECT wraps to SETTINGS", ui.paisley_tile == PAISLEY_SETTINGS);
+    turn(EN_K1, 3);
+    turn(EN_PRESET, 1);
+    bad += check("  knobs and PRESET do not edit sounds", TSEL->p[P_LEVEL] == value && paisley_on());
+    press(B_OCTDN);
+    bad += check("  OCT- returns to Stage without changing octave", ui.home_pg == 0u && !song.octave);
+    for (k = 0; k < PAISLEY_TILES; k++) {
+        go_home(); ui.home_pg = 2; ui.paisley_tile = (uint8_t)k;
+        press(B_OCTUP);
+        if (k == PAISLEY_STUDIO)
+            bad += check("  STUDIO opens SEQ", !ui.home && cur_page()->fam == FAM_SEQ);
+        else if (k == PAISLEY_SYNTH)
+            bad += check("  SYNTH opens EDIT", !ui.home && cur_page()->fam == FAM_EDIT);
+        else if (k == PAISLEY_MIXER)
+            bad += check("  MIXER opens TRACKS", !ui.home && cur_page()->fam == FAM_TRK);
+        else if (k == PAISLEY_MIDI)
+            bad += check("  MIDI opens SYSTEM", !ui.home && str_eq(cur_page()->title, "SYSTEM"));
+        else if (k == PAISLEY_PROJECT)
+            bad += check("  PROJECT opens project slots", !ui.home && cur_page()->graph == GR_SLOTS);
+        else {
+            bad += check("  SETTINGS opens menu", ui.home && ui.menu == 1u);
+            menu_close();
+        }
+    }
     ui_power_on();
     return bad;
 }
@@ -5728,6 +5773,7 @@ int main(void)
     bad += test_actions();
     bad += test_tracks();
     bad += test_track_count();
+    bad += test_paisley_home();
     bad += test_home_view();
     bad += test_home_view_release();
     bad += test_home_select();

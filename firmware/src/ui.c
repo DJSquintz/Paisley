@@ -124,7 +124,8 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 static struct {
     uint8_t designer_mode;       /* the sound designer: START, the stages (ui_designer.c) */
     uint8_t home;
-    uint8_t home_pg;             /* HOME's page: 0 Stage, 1 the chord view (ui_view.c); HOME tapped on HOME turns it */
+    uint8_t home_pg;             /* HOME views: 0 Stage, 1 chord, 2 Paisley six-tile dashboard */
+    uint8_t paisley_tile;        /* dashboard focus (not saved with a project) */
     uint8_t drum_sound;
     uint8_t page;                /* index into PAGES */
     uint8_t fam_last[FAM_COUNT]; /* last page used per family */
@@ -617,6 +618,56 @@ static void go_home(void)
     ui.hot_t = 0;
     song.seq_mode = 0;
     ui.force = 1;
+}
+
+/* Paisley HOME uses existing, tested page families; none of the destinations changes
+ * a synth parameter or a project until the user operates the destination page. */
+enum { PAISLEY_STUDIO, PAISLEY_SYNTH, PAISLEY_MIXER, PAISLEY_MIDI,
+       PAISLEY_PROJECT, PAISLEY_SETTINGS, PAISLEY_TILES };
+static int paisley_on(void) { return ui.home && ui.home_pg == 2u; }
+static void paisley_move(int32_t steps)
+{
+    int32_t n = (int32_t)ui.paisley_tile + steps % PAISLEY_TILES;
+    n %= PAISLEY_TILES;
+    if (n < 0) n += PAISLEY_TILES;
+    if (ui.paisley_tile != (uint8_t)n) {
+        ui.paisley_tile = (uint8_t)n;
+        ui.force = 1;
+    }
+}
+static void paisley_enter(void)
+{
+    uint32_t i;
+    switch (ui.paisley_tile) {
+    case PAISLEY_STUDIO: open_family(FAM_SEQ); break;
+    case PAISLEY_SYNTH: open_family(FAM_EDIT); break;
+    case PAISLEY_MIXER:
+        ui.page = (uint8_t)page_first(FAM_TRK);
+        ui.fam_last[FAM_TRK] = ui.page;
+        ui.home = 0;
+        page_entered();
+        break;
+    case PAISLEY_MIDI:
+        for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, "SYSTEM"); i++) {}
+        ui.page = (uint8_t)(i < NPAGES ? i : page_first(FAM_GLO));
+        ui.fam_last[FAM_GLO] = ui.page;
+        ui.home = 0;
+        page_entered();
+        break;
+    case PAISLEY_PROJECT:
+        for (i = 0; i < NPAGES && PAGES[i].graph != GR_SLOTS; i++) {}
+        ui.page = (uint8_t)(i < NPAGES ? i : page_first(FAM_SAVE));
+        ui.fam_last[FAM_SAVE] = ui.page;
+        ui.home = 0;
+        page_entered();
+        break;
+    default: /* SETTINGS: the existing device settings menu, not a new preferences store */
+        ui.menu = 1;
+        ui.menu_sel = 0;
+        ui.menu_scroll = 0;
+        ui.force = 1;
+        break;
+    }
 }
 
 /* ------------------------------------------------------- track setup --- */
