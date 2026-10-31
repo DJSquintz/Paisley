@@ -47,6 +47,8 @@ PALETTES = [
      ((150, 20, 102), (32, 64, 178), (0, 88, 90), (138, 54, 0))),
     ("LO-FI",    (32, 28, 26),    (48, 42, 38),    (236, 226, 208), (250, 244, 232),
      ((218, 140, 128), (214, 182, 104), (146, 184, 142), (142, 164, 206))),
+("PAISLEY PURPLE", (8, 5, 14), (23, 15, 34), (226, 207, 255), (255, 105, 180),
+     ((224, 190, 255), (255, 112, 183), (140, 225, 245), (255, 210, 145))),
 ]
 TEST_GRAY = ("GRAY", (14, 14, 14), (36, 36, 36), (204, 204, 204), (255, 255, 255),
              ((232, 232, 232), (220, 220, 220), (208, 208, 208), (244, 244, 244)))
@@ -229,7 +231,7 @@ def main():
                "static const ui_pal_t UI_PALETTES[] = {"]
         out += [row(p) for p in PALETTES]
         out += ["#ifdef UI_TEST_PALETTE", row(TEST_GRAY), "#endif", "};",
-                f"#define UI_NPALETTES {len(PALETTES)}u", "#define UI_DEFAULT_INDEX 0u",
+                f"#define UI_NPALETTES {len(PALETTES)}u", "#define UI_DEFAULT_INDEX 8u",
                 f"#define UI_GRAY_INDEX {len(PALETTES)}u      /* (UI_TEST_PALETTE only) */",
                 f"#define UI_PAL_TAG {PAL_TAG}u          /* stored id = UI_PAL_TAG + index */"]
         out += [f"#define UI_{k}_PCT {v}" for k, v in PCT.items()] + [f"#define UI_RAISE_PCT {RAISE_PCT}   /* SURF -> TEXT */"]
