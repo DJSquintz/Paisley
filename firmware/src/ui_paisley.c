@@ -93,6 +93,25 @@ static void paisley_draw(void)
             if (on)
                 cv_rect(x + 25, y + tile_h - 6, tile_w - 50, 2, T_ACCENT);
         }
+        /* Foreground details must be rendered AFTER opaque tiles. Keep them
+         * close to tile corners so navigation labels remain unobstructed. */
+        for (k = 0; k < PAISLEY_TILES; k++) {
+            int32_t x = tile_x[k % 2u], y = tile_y[k / 2u];
+            uint16_t cap = ux_mix(T_ACCENT, T_THEME, 40);
+            uint16_t stem = ux_mix(T_TEXT, T_BG, 65);
+            /* Moss and a pair of mushrooms growing against the lower edge. */
+            cv_line(x + 3, y + tile_h - 5, x + 26, y + tile_h - 5, foliage);
+            paisley_mushroom(x + 4, y + tile_h - 14, stem, cap, T_THEME);
+            paisley_mushroom(x + 17, y + tile_h - 12, stem, cap, T_ACCENT);
+        }
+        /* Visible fireflies in unobstructed tile corners. Changing the
+         * selected tile changes which cluster glows brightest. */
+        for (k = 0; k < PAISLEY_TILES; k++) {
+            int32_t x = tile_x[k % 2u], y = tile_y[k / 2u];
+            uint16_t light = k == (uint32_t)ui.paisley_tile ? T_ACCENT : T_THEME;
+            cv_rect(x + tile_w - 14, y + 9, 3, 3, light);
+            cv_rect(x + tile_w - 19, y + 14, 2, 2, light);
+        }
         cv_blit_band(0, 30);
     }
     draw_head();
