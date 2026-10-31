@@ -77,6 +77,7 @@ jobs:
           MELODEE_SID_FAST: '1'
           MELODEE_CAPTURE_FAST: '1'
         run: ./build.sh --nightly
+        cp build/melodee-nightly.fwsc build/melodee.fwsc
 
       - name: Run automated tests
         env:
