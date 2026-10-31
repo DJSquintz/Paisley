@@ -5,11 +5,61 @@
  */
 
 /* No independent framebuffer: render using Melodee's existing bounded canvas.
- * The backdrop is a static forest motif for this milestone. Living-forest
- * animation and sound-reactive elements are deliberately out of scope. */
+ * The forest is deliberately deterministic, with a different cluster of
+ * fireflies for each selected tile. No timer, heap use or audio-thread work.
+ * Continuous motion and synth-reactivity require separate performance tests. */
 static const char *const PAISLEY_TILE_NAME[PAISLEY_TILES] = {
     "STUDIO", "SYNTH", "MIXER", "MIDI", "PROJECT", "SETTINGS"
 };
+
+/* Quiet pixel-scale habitat behind the opaque navigation tiles. The renderer
+ * clips every primitive to the current canvas band. */
+static void paisley_mushroom(int32_t x, int32_t y, uint16_t stem,
+                            uint16_t cap, uint16_t glow)
+{
+    cv_rect(x + 3, y + 4, 3, 6, stem);
+    cv_rect(x + 1, y + 2, 7, 3, cap);
+    cv_rect(x + 3, y, 3, 2, cap);
+    cv_rect(x + 3, y + 2, 1, 1, glow);
+    cv_rect(x + 6, y + 3, 1, 1, glow);
+}
+
+static void paisley_habitat(uint16_t mist, uint16_t trees, uint16_t foliage)
+{
+    static const uint8_t mx[] = { 5, 37, 70, 103, 148, 184, 219 };
+    static const uint8_t my[] = { 188, 178, 193, 183, 192, 181, 195 };
+    uint16_t moss = ux_mix(T_BG, T_ACCENT, 36);
+    uint16_t stems = ux_mix(T_TEXT, T_BG, 65);
+    uint16_t cap = ux_mix(T_ACCENT, T_THEME, 40);
+    uint32_t k;
+
+    cv_rect(0, 151, 240, 59, mist);
+    /* Distant trunks and their branches form the deep background. */
+    for (k = 0; k < 10u; k++) {
+        int32_t cx = 9 + (int32_t)k * 25;
+        int32_t top = 122 + (int32_t)(k * 13u % 28u);
+        cv_rect(cx, top, 3, 208 - top, trees);
+        cv_line(cx - 10, top + 18, cx + 1, top, foliage);
+        cv_line(cx + 1, top, cx + 12, top + 18, foliage);
+        cv_line(cx - 8, top + 28, cx + 1, top + 7, foliage);
+        cv_line(cx + 1, top + 7, cx + 10, top + 28, foliage);
+    }
+    /* Forest-floor moss, low-contrast roots and little mushroom colonies. */
+    cv_rect(0, 202, 240, 8, trees);
+    for (k = 0; k < 7u; k++) {
+        int32_t x = mx[k], y = my[k];
+        cv_line(x - 6, y + 12, x + 15, y + 10, moss);
+        paisley_mushroom(x, y, stems, cap, T_THEME);
+    }
+    /* Selected destination changes the firefly constellation. It is a visual
+     * focus cue, not an assertion about current audio or synth parameters. */
+    for (k = 0; k < 5u; k++) {
+        uint32_t seed = (uint32_t)ui.paisley_tile * 37u + k * 53u;
+        int32_t x = 12 + (int32_t)(seed * 17u % 213u);
+        int32_t y = 117 + (int32_t)(seed * 11u % 58u);
+        cv_rect(x, y, 2, 2, k & 1u ? T_ACCENT : T_THEME);
+    }
+}
 
 static void paisley_draw(void)
 {
@@ -26,21 +76,7 @@ static void paisley_draw(void)
     for (band = 0; band < (uint32_t)ch; band += strip) {
         cv_begin_band(cw, (uint32_t)ch, T_BG, band);
 
-        /* Soft treeline and ground: low contrast behind opaque navigation tiles. */
-        cv_rect(0, 151, 240, 59, mist);
-        for (k = 0; k < 10u; k++) {
-            int32_t cx = 9 + (int32_t)k * 25;
-            int32_t top = 122 + (int32_t)(k * 13u % 28u);
-            cv_rect(cx, top, 3, 208 - top, trees);
-            cv_line(cx - 10, top + 18, cx + 1, top, foliage);
-            cv_line(cx + 1, top, cx + 12, top + 18, foliage);
-            cv_line(cx - 8, top + 28, cx + 1, top + 7, foliage);
-            cv_line(cx + 1, top + 7, cx + 10, top + 28, foliage);
-        }
-        /* Firefly-like points are static until the later Living Forest milestone. */
-        cv_rect(14, 120, 2, 2, T_ACCENT);
-        cv_rect(219, 137, 2, 2, T_THEME);
-        cv_rect(75, 145, 2, 2, T_ACCENT);
+        paisley_habitat(mist, trees, foliage);
 
         cv_text_c(120, ty_y(17, TY_VL), TY_VL, "PAISLEY", T_THEME, T_BG);
         cv_text_c(120, ty_y(45, TY_LB), TY_LB, "SELECT: MOVE  OCT+: OPEN", T_MID, T_BG);
